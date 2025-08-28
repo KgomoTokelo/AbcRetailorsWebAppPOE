@@ -1,0 +1,259 @@
+﻿@model IEnumerable<AbcRetailors.Models.Product>
+
+@{
+    ViewData["Title"] = "Products";
+    var rowIndex = 0;
+}
+
+<!-- Animate.css -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+
+<style>
+    /* Escape  for Razor */
+    @@keyframes pulse {
+        0%
+
+    {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.02);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+
+    }
+
+    /* Grid / card styles */
+    .product-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 1.25rem;
+        margin-top: 1.5rem;
+    }
+
+    .product-card {
+        background: #fff;
+        border-radius: .6rem;
+        padding: 1rem;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+        transition: transform .22s ease, box-shadow .22s ease;
+        overflow: hidden;
+    }
+
+        .product-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+        }
+
+    .product-image {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        border-radius: .4rem;
+        display: block;
+        margin-bottom: .75rem;
+    }
+
+    .img-placeholder {
+        width: 100%;
+        height: 150px;
+        border-radius: .4rem;
+        background: #f5f6f8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #9aa0a6;
+        margin-bottom: .75rem;
+        font-size: 1.5rem;
+    }
+
+    .product-title {
+        font-weight: 700;
+        margin-bottom: .35rem;
+        font-size: 1.05rem;
+    }
+
+    .product-desc {
+        color: #4b5563;
+        font-size: .94rem;
+        min-height: 3rem;
+    }
+
+    .product-footer {
+        margin-top: .75rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .5rem;
+    }
+
+    .price {
+        font-weight: 700;
+        color: #1f7a4c;
+    }
+
+    .btn-small {
+        padding: .35rem .6rem;
+        font-size: .85rem;
+        border-radius: .35rem;
+    }
+
+    /* stock badge visuals */
+    .stock-badge {
+        padding: .25rem .5rem;
+        border-radius: .35rem;
+        font-weight: 600;
+        font-size: .85rem;
+    }
+
+    .stock-good {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .stock-low {
+        background: #fffbeb;
+        color: #92400e;
+    }
+
+    .stock-out {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    /* small helper for product id */
+    .product-id {
+        color: #6b7280;
+        font-size: .82rem;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0"><i class="fas fa-box text-primary"></i> Products</h2>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i> Add New Product
+    </a>
+</div>
+
+@if (Model != null && Model.Any())
+{
+    <div class="product-grid">
+        @foreach (var product in Model)
+        {
+            rowIndex++;
+            // compute delay: 0.12s per item, cap to avoid huge delays if many products
+            var delaySeconds = Math.Min(rowIndex * 0.12, 2.0); // max 2s
+            var delayString = delaySeconds.ToString("0.##") + "s";
+
+            <div class="product-card animate__animated animate__fadeInUp"
+                 style="animation-delay: @delayString;">
+                @* Image *@
+                @if (!string.IsNullOrEmpty(product.ImageUrl))
+                {
+                    <img src="@product.ImageUrl" alt="@product.ProductName" class="product-image" />
+                }
+                else
+                {
+                    <div class="img-placeholder">
+                        <i class="fas fa-image"></i>
+                    </div>
+                }
+
+                @* Body *@
+                <div>
+                    <div class="product-title">@product.ProductName</div>
+                    <div class="product-id"><code>@(product.ProductId != null && product.ProductId.Length > 8 ? product.ProductId.Substring(0, 8) + "..." : product.ProductId)</code></div>
+                    <p class="product-desc">
+                        @(string.IsNullOrEmpty(product.Description) ? "No description." : (product.Description.Length > 120 ? product.Description.Substring(0, 120) + "..." : product.Description))
+                    </p>
+                </div>
+
+                @* Footer: price, stock, actions *@
+                <div class="product-footer">
+                    <div>
+                        <div class="price">@product.Price.ToString("C")</div>
+                        @if (product.Price <= 0)
+                        {
+                            <div class="text-danger small">⚠️ Price not set</div>
+                        }
+                    </div>
+
+                    <div style="text-align:right;">
+                        @* Stock badge *@
+                        @{
+                            var stockClass = product.StockAvaliable > 10 ? "stock-good" : (product.StockAvaliable > 0 ? "stock-low" : "stock-out");
+                        }
+                        <div class="stock-badge @stockClass mb-2">@product.StockAvaliable</div>
+
+                        @* Edit / Delete buttons *@
+                        <div class="btn-group" role="group" aria-label="Actions">
+                            <a asp-action="Edit" asp-route-id="@product.RowKey" class="btn btn-outline-primary btn-small" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+
+                            <button type="button"
+                                    class="btn btn-outline-danger btn-small"
+                                    data-rowkey="@product.RowKey"
+                                    data-name="@product.ProductName"
+                                    onclick="confirmDelete(this)"
+                                    title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> No products found.
+        <a asp-action="Create" class="alert-link">Add your first product</a>!
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i> Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete product <strong id="productName"></strong>?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Cancel
+                </button>
+                <form id="deleteForm" method="post" style="display:inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i> Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // element is the button element that was clicked
+        function confirmDelete(element) {
+            var id = element.getAttribute('data-rowkey');
+            var name = element.getAttribute('data-name') || 'this product';
+            document.getElementById('productName').textContent = name;
+            // set the POST action - encode the id in case of special chars
+            document.getElementById('deleteForm').action = '/Product/Delete/' + encodeURIComponent(id);
+            var modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            modal.show();
+        }
+    </script>
+}
